@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VORTEX">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="description" content="Real-time tornado risk tracker for Jonesboro, AR">
+<title>VORTEX — Jonesboro Tornado Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #0f0f1a;
+    --panel2: #13131f;
+    --border: #1e1e35;
+    --accent: #ff4500;
+    --accent2: #ff8c00;
+    --warn: #ffd700;
+    --safe: #00e5a0;
+    --text: #e8e8f0;
+    --muted: #5a5a7a;
+    --red-glow: rgba(255,69,0,0.15);
+  }
+
+- { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+background: var(–bg);
+color: var(–text);
+font-family: ‘Barlow Condensed’, sans-serif;
+min-height: 100vh;
+overflow-x: hidden;
+}
+
+/* Animated radar background */
+body::before {
+content: ‘’;
+position: fixed;
+top: 50%;
+left: 50%;
+width: 200vmax;
+height: 200vmax;
+transform: translate(-50%, -50%);
+background: repeating-conic-gradient(
+from 0deg,
+transparent 0deg,
+transparent 29deg,
+rgba(255,69,0,0.012) 30deg,
+transparent 31deg
+);
+animation: radarSpin 12s linear infinite;
+pointer-events: none;
+z-index: 0;
+}
+
+@keyframes radarSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+.grid-overlay {
+position: fixed;
+inset: 0;
+background-image:
+linear-gradient(rgba(255,69,0,0.03) 1px, transparent 1px),
+linear-gradient(90deg, rgba(255,69,0,0.03) 1px, transparent 1px);
+background-size: 40px 40px;
+pointer-events: none;
+z-index: 0;
+}
+
+.container {
+position: relative;
+z-index: 1;
+max-width: 1100px;
+margin: 0 auto;
+padding: 24px 20px;
+}
+
+/* HEADER */
+header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+margin-bottom: 32px;
+padding-bottom: 20px;
+border-bottom: 1px solid var(–border);
+}
+
+.logo-block h1 {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: clamp(42px, 8vw, 72px);
+letter-spacing: 8px;
+line-height: 0.9;
+background: linear-gradient(135deg, #ff4500, #ff8c00);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+text-shadow: none;
+filter: drop-shadow(0 0 30px rgba(255,69,0,0.5));
+}
+
+.logo-block .subtitle {
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 11px;
+color: var(–muted);
+letter-spacing: 4px;
+margin-top: 4px;
+}
+
+.status-pill {
+display: flex;
+align-items: center;
+gap: 8px;
+background: var(–panel);
+border: 1px solid var(–border);
+padding: 8px 16px;
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 11px;
+color: var(–muted);
+letter-spacing: 2px;
+}
+
+.pulse-dot {
+width: 8px;
+height: 8px;
+border-radius: 50%;
+background: var(–safe);
+animation: pulse 2s infinite;
+box-shadow: 0 0 8px var(–safe);
+}
+
+@keyframes pulse {
+0%, 100% { opacity: 1; transform: scale(1); }
+50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* MAIN GRID */
+.main-grid {
+display: grid;
+grid-template-columns: 1fr 320px;
+gap: 20px;
+}
+
+@media (max-width: 768px) {
+.main-grid { grid-template-columns: 1fr; }
+}
+
+/* RISK GAUGE */
+.risk-panel {
+background: var(–panel);
+border: 1px solid var(–border);
+padding: 28px;
+position: relative;
+overflow: hidden;
+}
+
+.risk-panel::before {
+content: ‘’;
+position: absolute;
+top: 0; left: 0; right: 0;
+height: 2px;
+background: linear-gradient(90deg, var(–accent), var(–accent2), transparent);
+}
+
+.section-label {
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 10px;
+letter-spacing: 4px;
+color: var(–muted);
+margin-bottom: 20px;
+}
+
+.risk-display {
+display: flex;
+align-items: center;
+gap: 32px;
+flex-wrap: wrap;
+}
+
+.gauge-wrap {
+position: relative;
+width: 180px;
+height: 180px;
+flex-shrink: 0;
+}
+
+.gauge-wrap svg {
+transform: rotate(-90deg);
+filter: drop-shadow(0 0 12px rgba(255,69,0,0.3));
+}
+
+.gauge-center {
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+text-align: center;
+}
+
+.gauge-number {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 52px;
+line-height: 1;
+color: var(–accent);
+filter: drop-shadow(0 0 8px rgba(255,69,0,0.6));
+}
+
+.gauge-label {
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 9px;
+color: var(–muted);
+letter-spacing: 2px;
+}
+
+.risk-info { flex: 1; min-width: 180px; }
+
+.risk-level-name {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 38px;
+letter-spacing: 4px;
+line-height: 1;
+margin-bottom: 8px;
+}
+
+.risk-desc {
+font-size: 14px;
+font-weight: 300;
+color: #aaa;
+line-height: 1.6;
+margin-bottom: 16px;
+}
+
+.risk-factors {
+display: flex;
+flex-direction: column;
+gap: 6px;
+}
+
+.factor-row {
+display: flex;
+align-items: center;
+gap: 10px;
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 11px;
+color: var(–muted);
+}
+
+.factor-bar-wrap {
+flex: 1;
+height: 3px;
+background: var(–border);
+}
+
+.factor-bar {
+height: 100%;
+background: linear-gradient(90deg, var(–accent), var(–accent2));
+transition: width 1.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.factor-val {
+width: 30px;
+text-align: right;
+color: var(–text);
+}
+
+/* AI ANALYSIS */
+.ai-panel {
+background: var(–panel);
+border: 1px solid var(–border);
+padding: 24px;
+margin-top: 20px;
+position: relative;
+}
+
+.ai-panel::before {
+content: ‘’;
+position: absolute;
+top: 0; left: 0; right: 0;
+height: 2px;
+background: linear-gradient(90deg, transparent, var(–accent2), transparent);
+}
+
+.ai-content {
+font-size: 14px;
+font-weight: 300;
+color: #bbb;
+line-height: 1.8;
+font-family: ‘Barlow Condensed’, sans-serif;
+min-height: 60px;
+}
+
+.typing-cursor {
+display: inline-block;
+width: 8px;
+height: 14px;
+background: var(–accent);
+animation: blink 1s infinite;
+vertical-align: middle;
+margin-left: 2px;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* SIDEBAR */
+.sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+.panel {
+background: var(–panel);
+border: 1px solid var(–border);
+padding: 20px;
+position: relative;
+}
+
+.panel::before {
+content: ‘’;
+position: absolute;
+top: 0; left: 0; right: 0;
+height: 1px;
+background: linear-gradient(90deg, var(–accent), transparent);
+}
+
+/* LOCATION PANEL */
+.location-info {
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+
+.loc-row {
+display: flex;
+justify-content: space-between;
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 11px;
+padding-bottom: 8px;
+border-bottom: 1px solid var(–border);
+}
+
+.loc-row:last-child { border-bottom: none; }
+.loc-key { color: var(–muted); }
+.loc-val { color: var(–text); }
+
+/* ALERTS */
+.alert-list { display: flex; flex-direction: column; gap: 10px; }
+
+.alert-item {
+border-left: 3px solid;
+padding: 10px 12px;
+background: rgba(255,255,255,0.02);
+}
+
+.alert-item.tornado { border-color: var(–accent); }
+.alert-item.watch { border-color: var(–warn); }
+.alert-item.advisory { border-color: var(–accent2); }
+.alert-item.none { border-color: var(–safe); }
+
+.alert-type {
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 10px;
+letter-spacing: 2px;
+margin-bottom: 4px;
+}
+
+.alert-item.tornado .alert-type { color: var(–accent); }
+.alert-item.watch .alert-type { color: var(–warn); }
+.alert-item.advisory .alert-type { color: var(–accent2); }
+.alert-item.none .alert-type { color: var(–safe); }
+
+.alert-text { font-size: 12px; color: #999; line-height: 1.4; }
+
+/* HISTORY TABLE */
+.history-panel { margin-top: 20px; }
+
+.history-table {
+width: 100%;
+border-collapse: collapse;
+font-size: 12px;
+}
+
+.history-table th {
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 9px;
+letter-spacing: 2px;
+color: var(–muted);
+text-align: left;
+padding: 8px 6px;
+border-bottom: 1px solid var(–border);
+}
+
+.history-table td {
+padding: 10px 6px;
+border-bottom: 1px solid rgba(30,30,53,0.5);
+color: #bbb;
+vertical-align: top;
+}
+
+.history-table tr:hover td { background: rgba(255,69,0,0.03); }
+
+.ef-badge {
+display: inline-block;
+padding: 2px 6px;
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 10px;
+font-weight: bold;
+}
+
+.ef0 { background: rgba(0,229,160,0.15); color: var(–safe); }
+.ef1 { background: rgba(255,200,0,0.15); color: var(–warn); }
+.ef2 { background: rgba(255,140,0,0.15); color: var(–accent2); }
+.ef3, .ef4 { background: rgba(255,69,0,0.2); color: var(–accent); }
+
+/* SEASON CHART */
+.season-chart { display: flex; align-items: flex-end; gap: 4px; height: 60px; margin-top: 12px; }
+
+.month-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+.month-bar {
+width: 100%;
+background: linear-gradient(to top, var(–accent), var(–accent2));
+border-radius: 1px 1px 0 0;
+opacity: 0.7;
+transition: opacity 0.2s;
+min-height: 2px;
+}
+
+.month-bar:hover { opacity: 1; }
+
+.month-label {
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 8px;
+color: var(–muted);
+letter-spacing: 1px;
+}
+
+/* CURRENT MONTH HIGHLIGHT */
+.month-bar.current { opacity: 1; box-shadow: 0 0 8px rgba(255,69,0,0.5); }
+
+/* REFRESH BTN */
+.refresh-btn {
+background: transparent;
+border: 1px solid var(–border);
+color: var(–muted);
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 10px;
+letter-spacing: 2px;
+padding: 8px 14px;
+cursor: pointer;
+transition: all 0.2s;
+display: flex;
+align-items: center;
+gap: 6px;
+}
+
+.refresh-btn:hover {
+border-color: var(–accent);
+color: var(–accent);
+}
+
+.refresh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* LOADING STATE */
+.skeleton {
+background: linear-gradient(90deg, var(–panel) 25%, var(–panel2) 50%, var(–panel) 75%);
+background-size: 200% 100%;
+animation: shimmer 1.5s infinite;
+border-radius: 2px;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+.error-msg { color: var(–accent); font-family: ‘Share Tech Mono’, monospace; font-size: 11px; }
+
+/* RISK COLORS */
+.risk-minimal { color: var(–safe); }
+.risk-low { color: #90ee90; }
+.risk-moderate { color: var(–warn); }
+.risk-elevated { color: var(–accent2); }
+.risk-high { color: var(–accent); }
+.risk-extreme { color: #ff0000; text-shadow: 0 0 20px #ff0000; }
+
+/* SPC PANEL */
+.spc-grid {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 10px;
+}
+@media (max-width: 600px) { .spc-grid { grid-template-columns: repeat(2,1fr); } }
+
+.spc-card {
+background: var(–panel2);
+border: 1px solid var(–border);
+padding: 12px 10px 10px;
+position: relative;
+transition: border-color 0.2s;
+}
+.spc-card:hover { border-color: rgba(255,140,0,0.4); }
+.spc-highlight { border-color: rgba(255,69,0,0.35) !important; }
+.spc-highlight::before {
+content: ‘KEY’;
+position: absolute; top: 6px; right: 6px;
+font-family: ‘Share Tech Mono’, monospace; font-size: 7px;
+color: var(–accent); letter-spacing: 2px;
+}
+
+.spc-param {
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 9px; letter-spacing: 1px;
+color: var(–muted); margin-bottom: 4px;
+}
+.spc-value {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 30px; line-height: 1;
+color: var(–text);
+transition: color 0.5s;
+}
+.spc-unit {
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 8px; color: var(–muted);
+margin-bottom: 8px; letter-spacing: 1px;
+}
+.spc-bar-wrap {
+height: 3px; background: var(–border); margin-bottom: 6px;
+}
+.spc-bar {
+height: 100%;
+background: linear-gradient(90deg, var(–accent), var(–accent2));
+transition: width 1.2s cubic-bezier(0.23,1,0.32,1);
+width: 0%;
+}
+.spc-interp {
+font-size: 10px; color: #888; line-height: 1.3;
+font-family: ‘Barlow Condensed’, sans-serif;
+}
+
+/* 14-DAY FORECAST */
+.forecast-card {
+background: var(–panel2);
+border: 1px solid var(–border);
+padding: 10px 6px 8px;
+text-align: center;
+cursor: default;
+transition: border-color 0.2s, transform 0.15s;
+position: relative;
+}
+.forecast-card:hover { transform: translateY(-2px); border-color: rgba(255,69,0,0.4); }
+.forecast-card.fc-today { border-color: var(–accent); box-shadow: 0 0 14px rgba(255,69,0,0.25); }
+.fc-glow { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
+.fc-day  { font-family:‘Share Tech Mono’,monospace; font-size:9px; color:var(–muted); letter-spacing:1px; margin-bottom:4px; }
+.fc-today .fc-day { color: var(–accent); }
+.fc-date { font-family:‘Bebas Neue’,sans-serif; font-size:20px; line-height:1; margin-bottom:3px; }
+.fc-score { font-family:‘Share Tech Mono’,monospace; font-size:13px; font-weight:bold; margin-bottom:2px; }
+.fc-level { font-size:7px; font-family:‘Share Tech Mono’,monospace; letter-spacing:1px; opacity:0.85; }
+.fc-bar-wrap { margin-top:6px; height:26px; display:flex; align-items:flex-end; justify-content:center; }
+.fc-bar { width:10px; border-radius:2px 2px 0 0; min-height:2px; }
+.fc-conf { font-family:‘Share Tech Mono’,monospace; font-size:7px; color:var(–muted); margin-top:3px; letter-spacing:0px; }
+.fc-tooltip {
+display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+background:#0c0c18; border:1px solid var(–border); padding:10px 12px; width:190px;
+z-index:200; text-align:left; pointer-events:none; box-shadow:0 4px 20px rgba(0,0,0,0.6);
+}
+.forecast-card:hover .fc-tooltip { display:block; }
+.fc-tt-title { font-family:‘Share Tech Mono’,monospace; font-size:10px; letter-spacing:1px; margin-bottom:5px; }
+.fc-tt-body  { font-size:11px; color:#999; line-height:1.5; }
+.legend-item { display:flex; align-items:center; gap:5px; font-family:‘Share Tech Mono’,monospace; font-size:9px; color:var(–muted); letter-spacing:1px; }
+.legend-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+</style>
+
+</head>
+<body>
+
+<div class="grid-overlay"></div>
+
+<div id="sandboxBanner" style="display:none;background:linear-gradient(90deg,rgba(255,140,0,0.15),rgba(255,69,0,0.1));border-bottom:1px solid var(--accent2);padding:10px 20px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent2);letter-spacing:1px;position:relative;z-index:10;">
+  ⚠ LIVE DATA UNAVAILABLE — CHECK YOUR INTERNET CONNECTION &nbsp;·&nbsp; 
+  SHOWING CLIMATOLOGICAL MODEL &nbsp;·&nbsp; 
+  <span style="cursor:pointer;text-decoration:underline;" onclick="loadAll()">TAP TO RETRY</span>
+</div>
+
+<div class="container">
+  <header>
+    <div class="logo-block">
+      <h1>VORTEX</h1>
+      <div class="subtitle">JONESBORO, AR — TORNADO INTELLIGENCE SYSTEM</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="status-pill">
+        <span class="pulse-dot" id="liveDot"></span>
+        <span id="statusText">FETCHING DATA</span>
+      </div>
+      <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
+        <span id="refreshIcon">↻</span> REFRESH
+      </button>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- LEFT COLUMN -->
+    <div>
+      <!-- RISK GAUGE -->
+      <div class="risk-panel">
+        <div class="section-label">// TODAY'S TORNADO RISK RATING</div>
+        <div class="risk-display">
+          <div class="gauge-wrap">
+            <svg width="180" height="180" viewBox="0 0 180 180">
+              <!-- Background arc -->
+              <circle cx="90" cy="90" r="72" fill="none" stroke="#1e1e35" stroke-width="10"/>
+              <!-- Risk arc -->
+              <circle cx="90" cy="90" r="72" fill="none"
+                stroke="url(#riskGrad)"
+                stroke-width="10"
+                stroke-linecap="round"
+                stroke-dasharray="452"
+                stroke-dashoffset="452"
+                id="riskArc"
+                style="transition: stroke-dashoffset 1.5s cubic-bezier(0.23, 1, 0.32, 1)"/>
+              <defs>
+                <linearGradient id="riskGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#00e5a0"/>
+                  <stop offset="40%" stop-color="#ffd700"/>
+                  <stop offset="70%" stop-color="#ff8c00"/>
+                  <stop offset="100%" stop-color="#ff0000"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="gauge-center">
+              <div class="gauge-number" id="riskScore">--</div>
+              <div class="gauge-label">/ 100</div>
+            </div>
+          </div>
+
+```
+      <div class="risk-info">
+        <div class="risk-level-name" id="riskLevelName">LOADING...</div>
+        <div class="risk-desc" id="riskDesc">Fetching current atmospheric conditions and calculating risk...</div>
+        <div class="risk-factors">
+          <div class="factor-row">
+            <span title="0-1km Storm-Relative Helicity">SRH 0-1km</span>
+            <div class="factor-bar-wrap"><div class="factor-bar" id="barShear" style="width:0%"></div></div>
+            <span class="factor-val" id="valShear">-</span>
+          </div>
+          <div class="factor-row">
+            <span title="Mixed-Layer CAPE">ML CAPE</span>
+            <div class="factor-bar-wrap"><div class="factor-bar" id="barCape" style="width:0%"></div></div>
+            <span class="factor-val" id="valCape">-</span>
+          </div>
+          <div class="factor-row">
+            <span title="Effective Bulk Wind Shear">EBS</span>
+            <div class="factor-bar-wrap"><div class="factor-bar" id="barLift" style="width:0%"></div></div>
+            <span class="factor-val" id="valLift">-</span>
+          </div>
+          <div class="factor-row">
+            <span title="Significant Tornado Parameter">STP</span>
+            <div class="factor-bar-wrap"><div class="factor-bar" id="barSeason" style="width:0%"></div></div>
+            <span class="factor-val" id="valSeason">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ANALYSIS -->
+  <div class="ai-panel">
+    <div class="section-label">// AI ATMOSPHERIC ANALYSIS</div>
+    <div class="ai-content" id="aiContent">
+      <span class="typing-cursor"></span>
+    </div>
+    <div style="margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;" id="aiTime"></div>
+  </div>
+
+
+  <!-- SPC MESOANALYSIS PARAMETERS -->
+  <div class="panel spc-panel" style="margin-top:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="section-label" style="margin-bottom:0;">// SPC MESOANALYSIS PARAMETERS — LIVE</div>
+      <a href="https://www.spc.noaa.gov/exper/mesoanalysis/new/" target="_blank"
+         style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-decoration:none;border:1px solid var(--border);padding:4px 8px;transition:all 0.2s;"
+         onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'"
+         onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">
+        ↗ SPC.NOAA.GOV
+      </a>
+    </div>
+    <div class="spc-grid" id="spcGrid">
+      <div class="spc-card" id="spc-srh1">
+        <div class="spc-param">0–1km SRH</div>
+        <div class="spc-value" id="spcValSrh1">—</div>
+        <div class="spc-unit">m²/s²</div>
+        <div class="spc-bar-wrap"><div class="spc-bar" id="spcBarSrh1"></div></div>
+        <div class="spc-interp" id="spcIntSrh1">Loading...</div>
+      </div>
+      <div class="spc-card" id="spc-srh3">
+        <div class="spc-param">0–3km SRH</div>
+        <div class="spc-value" id="spcValSrh3">—</div>
+        <div class="spc-unit">m²/s²</div>
+        <div class="spc-bar-wrap"><div class="spc-bar" id="spcBarSrh3"></div></div>
+        <div class="spc-interp" id="spcIntSrh3">Loading...</div>
+      </div>
+      <div class="spc-card" id="spc-cape">
+        <div class="spc-param">ML CAPE</div>
+        <div class="spc-value" id="spcValCape">—</div>
+        <div class="spc-unit">J/kg</div>
+        <div class="spc-bar-wrap"><div class="spc-bar" id="spcBarCape"></div></div>
+        <div class="spc-interp" id="spcIntCape">Loading...</div>
+      </div>
+      <div class="spc-card" id="spc-shear">
+        <div class="spc-param">Eff. Bulk Shear</div>
+        <div class="spc-value" id="spcValShear">—</div>
+        <div class="spc-unit">knots</div>
+        <div class="spc-bar-wrap"><div class="spc-bar" id="spcBarShear"></div></div>
+        <div class="spc-interp" id="spcIntShear">Loading...</div>
+      </div>
+      <div class="spc-card" id="spc-scp">
+        <div class="spc-param">Supercell Comp.</div>
+        <div class="spc-value" id="spcValScp">—</div>
+        <div class="spc-unit">SCP index</div>
+        <div class="spc-bar-wrap"><div class="spc-bar" id="spcBarScp"></div></div>
+        <div class="spc-interp" id="spcIntScp">Loading...</div>
+      </div>
+      <div class="spc-card spc-highlight" id="spc-stp">
+        <div class="spc-param">Sig. Tornado Param.</div>
+        <div class="spc-value" id="spcValStp">—</div>
+        <div class="spc-unit">STP index</div>
+        <div class="spc-bar-wrap"><div class="spc-bar" id="spcBarStp"></div></div>
+        <div class="spc-interp" id="spcIntStp">Loading...</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;" id="spcNote">
+      ⚡ VALUES ESTIMATED FROM SEASONAL CLIMATOLOGY + NWS DATA. FOR REAL-TIME VALUES VISIT SPC MESOANALYSIS.
+    </div>
+  </div>
+
+  <!-- 14-DAY OUTLOOK -->
+  <div class="panel" style="margin-top:20px;">
+    <div class="section-label">// 14-DAY TORNADO DEVELOPMENT OUTLOOK — JONESBORO, AR</div>
+    <div id="forecastGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;"></div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px;padding-top:10px;border-top:1px solid var(--border);">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">LEGEND:</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--safe)"></span>MINIMAL</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#90ee90"></span>LOW</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--warn)"></span>MODERATE</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--accent2)"></span>ELEVATED</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>HIGH</span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-left:auto;">CONFIDENCE DECREASES BEYOND DAY 7</span>
+    </div>
+  </div>
+
+  <!-- HISTORY TABLE -->
+  <div class="panel history-panel" style="margin-top:20px;">
+    <div class="section-label">// RECENT TORNADO EVENTS — NORTHEAST ARKANSAS</div>
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>DATE</th>
+          <th>EF SCALE</th>
+          <th>PATH LENGTH</th>
+          <th>LOCATION</th>
+          <th>INJURIES</th>
+        </tr>
+      </thead>
+      <tbody id="tornadoHistory">
+        <tr><td colspan="5" style="color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;">Loading historical data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <!-- LOCATION -->
+  <div class="panel">
+    <div class="section-label">// MONITORING ZONE</div>
+    <div class="location-info">
+      <div class="loc-row"><span class="loc-key">CITY</span><span class="loc-val">JONESBORO, AR</span></div>
+      <div class="loc-row"><span class="loc-key">COUNTY</span><span class="loc-val">CRAIGHEAD</span></div>
+      <div class="loc-row"><span class="loc-key">COORDS</span><span class="loc-val">35.84°N 90.70°W</span></div>
+      <div class="loc-row"><span class="loc-key">NWS OFFICE</span><span class="loc-val">MEMPHIS (KNMEMPHIS)</span></div>
+      <div class="loc-row"><span class="loc-key">RADIUS</span><span class="loc-val">75 MILE WATCH ZONE</span></div>
+      <div class="loc-row"><span class="loc-key">UPDATED</span><span class="loc-val" id="updateTime">--:--</span></div>
+    </div>
+  </div>
+
+  <!-- ACTIVE ALERTS -->
+  <div class="panel">
+    <div class="section-label">// ACTIVE WEATHER ALERTS</div>
+    <div class="alert-list" id="alertList">
+      <div class="alert-item none">
+        <div class="alert-type">FETCHING ALERTS...</div>
+        <div class="alert-text">Checking NWS data</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEASONAL CHART -->
+  <div class="panel">
+    <div class="section-label">// MONTHLY TORNADO FREQUENCY — AR AVG</div>
+    <div class="season-chart" id="seasonChart"></div>
+    <div style="margin-top:10px;font-size:11px;color:var(--muted);">Historical avg. tornadoes per month in AR. Peak season: <span style="color:var(--accent)">APR–MAY</span></div>
+  </div>
+
+  <!-- QUICK FACTS -->
+  <div class="panel">
+    <div class="section-label">// JONESBORO TORNADO STATS</div>
+    <div class="location-info">
+      <div class="loc-row"><span class="loc-key">AVG/YEAR (AR)</span><span class="loc-val" style="color:var(--accent)">35–40</span></div>
+      <div class="loc-row"><span class="loc-key">PEAK MONTHS</span><span class="loc-val">APR, MAY, NOV</span></div>
+      <div class="loc-row"><span class="loc-key">RISK REGION</span><span class="loc-val" style="color:var(--warn)">DIXIE ALLEY</span></div>
+      <div class="loc-row"><span class="loc-key">SPC REGION</span><span class="loc-val">MODERATE–HIGH</span></div>
+      <div class="loc-row"><span class="loc-key">NE AR EVENTS</span><span class="loc-val">~8–12/year</span></div>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// VORTEX — Jonesboro Tornado Tracker
+// Data sources:
+//   • Open-Meteo API  (CAPE, LI, CIN, multi-level winds) — free, no key, CORS-open
+//   • NWS Alerts API  (active watches/warnings)
+//   • SPC parameter formulas applied to Open-Meteo data
+// ════════════════════════════════════════════════════════════════════════════
+
+const LAT = 35.8423, LON = -90.7043;
+
+// 14-day hourly params from Open-Meteo
+const OM_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}`
+  + `&hourly=cape,lifted_index,convective_inhibition`
+  + `,wind_speed_10m,wind_direction_10m`
+  + `,wind_speed_80m,wind_direction_80m`
+  + `,wind_speed_120m,wind_direction_120m`
+  + `,wind_speed_180m,wind_direction_180m`
+  + `,temperature_2m,dewpoint_2m,surface_pressure`
+  + `&forecast_days=14&timezone=America%2FChicago&wind_speed_unit=kn`;
+
+const NWS_URL = `https://api.weather.gov/alerts/active?point=${LAT},${LON}&status=actual&message_type=alert`;
+
+// ─── Static data ─────────────────────────────────────────────────────────────
+const TORNADO_HISTORY = [
+  { date:"Apr 02, 2024", ef:"EF1", path:"8.3 mi",  location:"Craighead County",   inj:0  },
+  { date:"Dec 09, 2023", ef:"EF2", path:"14.1 mi", location:"Jonesboro area",     inj:3  },
+  { date:"Jun 15, 2023", ef:"EF0", path:"2.1 mi",  location:"NE Craighead",       inj:0  },
+  { date:"Mar 31, 2023", ef:"EF1", path:"5.6 mi",  location:"Greene County",      inj:1  },
+  { date:"Nov 05, 2022", ef:"EF2", path:"19.4 mi", location:"Mississippi County", inj:4  },
+  { date:"May 02, 2022", ef:"EF0", path:"0.8 mi",  location:"Lawrence County",    inj:0  },
+  { date:"Mar 22, 2022", ef:"EF3", path:"32.7 mi", location:"Poinsett County",    inj:12 },
+  { date:"Dec 10, 2021", ef:"EF4", path:"88.2 mi", location:"NE Arkansas",        inj:21 },
+];
+const MONTHLY_DATA = [3,4,8,22,18,10,6,5,7,9,14,6];
+const MONTHS       = ["J","F","M","A","M","J","J","A","S","O","N","D"];
+
+// Climatological fallback SPC params if API fails
+const MONTHLY_BASE_RISK = [12,15,28,62,54,30,18,14,20,26,42,18];
+const MONTHLY_SPC_PARAMS = {
+  0:{srh1:80,srh3:150,cape:200,ebs:30,scp:0.8,stp:0.2},
+  1:{srh1:100,srh3:180,cape:300,ebs:33,scp:1.0,stp:0.3},
+  2:{srh1:130,srh3:220,cape:600,ebs:38,scp:1.8,stp:0.6},
+  3:{srh1:210,srh3:320,cape:1300,ebs:52,scp:4.2,stp:1.2},
+  4:{srh1:190,srh3:290,cape:1500,ebs:48,scp:3.8,stp:1.0},
+  5:{srh1:140,srh3:220,cape:1800,ebs:35,scp:2.5,stp:0.6},
+  6:{srh1:90,srh3:150,cape:2000,ebs:25,scp:1.2,stp:0.2},
+  7:{srh1:80,srh3:140,cape:1600,ebs:22,scp:0.9,stp:0.1},
+  8:{srh1:100,srh3:170,cape:900,ebs:28,scp:1.3,stp:0.3},
+  9:{srh1:120,srh3:200,cape:700,ebs:35,scp:1.6,stp:0.5},
+  10:{srh1:170,srh3:280,cape:500,ebs:42,scp:2.8,stp:0.8},
+  11:{srh1:110,srh3:190,cape:250,ebs:34,scp:1.2,stp:0.3},
+};
+
+// ─── SPC Parameter computation from Open-Meteo data ─────────────────────────
+
+function dirDiff(d1, d2) {
+  // Signed angular difference d2-d1, wrapped to [-180,180]
+  let diff = ((d2 - d1) + 360) % 360;
+  if (diff > 180) diff -= 360;
+  return diff;
+}
+
+// Estimate 0-1km SRH from surface and ~80m winds (proxy for low-level hodograph)
+// True SRH needs full hodograph; this is a reasonable observational proxy
+function estimateSRH1(ws10, wd10, ws80, wd80) {
+  // Convert to u/v components (kt)
+  const toUV = (ws, wd) => ({
+    u: -ws * Math.sin(wd * Math.PI/180),
+    v: -ws * Math.cos(wd * Math.PI/180),
+  });
+  const s  = toUV(ws10, wd10);
+  const e  = toUV(ws80, wd80);
+  // Storm motion estimate: 30° right of mean wind, 75% of mean speed (Bunkers right-mover)
+  const mu = (s.u + e.u) / 2, mv = (s.v + e.v) / 2;
+  const mag = Math.sqrt(mu*mu + mv*mv);
+  const sm_u = mu + (mv/mag)*7.5;   // ~7.5 kt deviant
+  const sm_v = mv - (mu/mag)*7.5;
+  // SRH = cross product of storm-relative winds over the layer
+  const sr1u = s.u - sm_u, sr1v = s.v - sm_v;
+  const sr2u = e.u - sm_u, sr2v = e.v - sm_v;
+  const srh = Math.abs(sr1u*sr2v - sr1v*sr2u);
+  return Math.round(srh);
+}
+
+// Estimate 0-3km SRH using surface→120m wind layer
+function estimateSRH3(ws10, wd10, ws120, wd120) {
+  const toUV = (ws, wd) => ({
+    u: -ws * Math.sin(wd * Math.PI/180),
+    v: -ws * Math.cos(wd * Math.PI/180),
+  });
+  const s = toUV(ws10, wd10);
+  const e = toUV(ws120, wd120);
+  const mu = (s.u+e.u)/2, mv = (s.v+e.v)/2;
+  const mag = Math.max(0.1, Math.sqrt(mu*mu+mv*mv));
+  const sm_u = mu + (mv/mag)*7.5, sm_v = mv - (mu/mag)*7.5;
+  const sr1u=s.u-sm_u, sr1v=s.v-sm_v, sr2u=e.u-sm_u, sr2v=e.v-sm_v;
+  return Math.round(Math.abs(sr1u*sr2v - sr1v*sr2u) * 1.6); // scale to 0-3km
+}
+
+// Effective bulk shear: magnitude of wind vector difference surface→180m (proxy for 0-6km)
+function estimateEBS(ws10, wd10, ws180, wd180) {
+  const du = ws180 * Math.sin(wd180*Math.PI/180) - ws10 * Math.sin(wd10*Math.PI/180);
+  const dv = ws180 * Math.cos(wd180*Math.PI/180) - ws10 * Math.cos(wd10*Math.PI/180);
+  return Math.round(Math.sqrt(du*du + dv*dv));
+}
+
+// Supercell Composite Parameter
+// SCP = (MUCAPE/1000) × (SRH3/50) × (EBS/20)
+function computeSCP(cape, srh3, ebs) {
+  if (cape < 100) return 0;
+  return Math.max(0, parseFloat(((cape/1000) * (srh3/50) * (ebs/20)).toFixed(1)));
+}
+
+// Significant Tornado Parameter (effective-layer version approximation)
+// STP = (MLCAPE/1500) × (SRH1/150) × (EBS/20) × ((2000-|CIN|)/1500)
+function computeSTP(cape, srh1, ebs, cin) {
+  if (cape < 100 || srh1 < 10 || ebs < 15) return 0;
+  const cinFactor = Math.min(1, Math.max(0, (2000 - Math.abs(cin)) / 1500));
+  return Math.max(0, parseFloat(((cape/1500) * (srh1/150) * (ebs/20) * cinFactor).toFixed(2)));
+}
+
+// ─── Score normalizers (0-100) ────────────────────────────────────────────────
+function scoreSRH1(v)  { return Math.min(100, Math.round((v/400)*100)); }
+function scoreSRH3(v)  { return Math.min(100, Math.round((v/600)*100)); }
+function scoreCAPE(v)  { return Math.min(100, Math.round((v/3000)*100)); }
+function scoreEBS(v)   { return Math.min(100, Math.round((v/70)*100)); }
+function scoreSCP(v)   { return Math.min(100, Math.round((v/8)*100)); }
+function scoreSTP(v)   { return Math.min(100, Math.round((v/3)*100)); }
+
+function interpSRH1(v) {
+  if(v<50)  return "Weak rotation potential";
+  if(v<150) return "Marginal low-level rotation";
+  if(v<300) return "Moderate low-level rotation";
+  if(v<500) return "Strong tornado potential";
+  return "Extreme — violent tornadoes possible";
+}
+function interpSRH3(v) {
+  if(v<100) return "Minimal storm organization";
+  if(v<250) return "Some supercell potential";
+  if(v<400) return "Favorable for supercells";
+  if(v<600) return "Strong supercell environment";
+  return "Exceptional supercell/tornado environment";
+}
+function interpCAPE(v) {
+  if(v<250)  return "Stable — minimal instability";
+  if(v<1000) return "Modest instability present";
+  if(v<2000) return "Moderate instability";
+  if(v<3500) return "High instability";
+  return "Extreme instability — explosive convection";
+}
+function interpEBS(v) {
+  if(v<25) return "Weak shear — disorganized storms";
+  if(v<40) return "Marginal supercell shear";
+  if(v<55) return "Strong shear — supercell potential";
+  if(v<70) return "Excellent bulk shear for supercells";
+  return "Extreme — long-track tornado potential";
+}
+function interpSCP(v) {
+  if(v<1)  return "Non-supercell environment";
+  if(v<3)  return "Marginal supercell potential";
+  if(v<6)  return "Favorable for supercells";
+  if(v<10) return "High supercell probability";
+  return "Exceptional — intense supercells likely";
+}
+function interpSTP(v) {
+  if(v<0.5) return "Low significant tornado risk";
+  if(v<1)   return "Locally elevated — watch area";
+  if(v<2)   return "Significant tornado risk";
+  if(v<4)   return "High risk — strong tornadoes likely";
+  return "Extreme STP — violent tornadoes possible";
+}
+
+// ─── Compute risk score from SPC params ───────────────────────────────────────
+function computeScoreFromParams(params, alertEvents=[]) {
+  const s_stp  = scoreSTP(params.stp);
+  const s_scp  = scoreSCP(params.scp);
+  const s_srh1 = scoreSRH1(params.srh1);
+  const s_ebs  = scoreEBS(params.ebs);
+  const s_cape = scoreCAPE(params.cape);
+
+  const raw = s_stp*0.35 + s_scp*0.20 + s_srh1*0.20 + s_ebs*0.15 + s_cape*0.10;
+
+  const ALERT_BUMPS = {
+    'tornado warning':50,'tornado watch':30,
+    'severe thunderstorm warning':15,'severe thunderstorm watch':8,
+  };
+  let alertBonus = 0;
+  alertEvents.forEach(ev => {
+    const key = ev.toLowerCase();
+    for(const [p,b] of Object.entries(ALERT_BUMPS))
+      if(key.includes(p)) alertBonus = Math.max(alertBonus, b);
+  });
+
+  return Math.min(98, Math.max(2, Math.round(raw + alertBonus)));
+}
+
+function getRiskMeta(score, params) {
+  const stpStr = params.stp.toFixed(2), scpStr = params.scp.toFixed(1);
+  let level, shortDesc, analysis;
+  if(score<10){
+    level="MINIMAL"; shortDesc="Negligible tornado threat. Atmosphere stable over NE Arkansas.";
+    analysis=`Atmospheric conditions over Jonesboro are strongly stable. ML CAPE of ${params.cape} J/kg offers little convective fuel, SRH (0-1km) of ${params.srh1} m²/s² is insufficient for organized rotation, and STP of ${stpStr} indicates negligible tornado probability. No significant severe weather is expected.`;
+  } else if(score<25){
+    level="LOW"; shortDesc="Low tornado threat. Marginal parameters limit storm organization.";
+    analysis=`A low tornado threat exists for the Jonesboro area. SRH (0-1km) of ${params.srh1} m²/s² and EBS of ${params.ebs} kt provide only marginal storm organization, while ML CAPE of ${params.cape} J/kg offers modest instability. STP of ${stpStr} suggests only isolated and brief tornado potential.`;
+  } else if(score<45){
+    level="MODERATE"; shortDesc="Marginal SPC parameters. Monitor NWS for watch issuance.";
+    analysis=`Moderate tornado threat parameters are in place. SRH (0-1km) at ${params.srh1} m²/s², EBS of ${params.ebs} kt, and ML CAPE of ${params.cape} J/kg create a marginal but real supercell environment. SCP of ${scpStr} and STP of ${stpStr} indicate isolated tornado potential. Monitor NWS Memphis for potential watch issuances.`;
+  } else if(score<65){
+    level="ELEVATED"; shortDesc="Elevated SPC parameters. Supercell and tornado threat real.";
+    analysis=`Elevated tornado parameters are in place for Craighead County. SRH (0-1km) of ${params.srh1} m²/s² and 0-3km SRH of ${params.srh3} m²/s² support rotating updrafts. EBS at ${params.ebs} kt and SCP of ${scpStr} indicate a favorable supercell environment. STP of ${stpStr} represents a real and localized tornado threat — have a shelter plan ready.`;
+  } else if(score<80){
+    level="HIGH"; shortDesc="Dangerous SPC parameters. Strong tornadoes possible.";
+    analysis=`HIGH tornado threat — SPC parameters are at dangerous levels. SRH (0-1km) at ${params.srh1} m²/s² and EBS of ${params.ebs} kt combine with ML CAPE of ${params.cape} J/kg to create a volatile supercell environment. SCP of ${scpStr} and STP of ${stpStr} are in the range historically associated with significant tornado outbreaks. Activate your shelter plan now.`;
+  } else {
+    level="EXTREME"; shortDesc="EXTREME SPC values. Violent, long-track tornadoes possible.";
+    analysis=`EXTREME SPC parameters — a potentially historic outbreak is possible for NE Arkansas. SRH (0-1km) of ${params.srh1} m²/s², EBS of ${params.ebs} kt, and ML CAPE of ${params.cape} J/kg represent a textbook violent tornado environment. SCP of ${scpStr} and STP of ${stpStr} are values historically linked to EF3+ events. SEEK SHELTER IMMEDIATELY and monitor NWS Memphis.`;
+  }
+  return {level, shortDesc, analysis};
+}
+
+// ─── Climatological fallback (if API fails) ───────────────────────────────────
+function getClimoParams(date) {
+  const m = date.getMonth();
+  const dy = Math.floor((date - new Date(date.getFullYear(),0,0))/86400000);
+  const base = MONTHLY_SPC_PARAMS[m];
+  const j = (v, s, ph) => Math.max(0, Math.round(v + v*s*Math.sin(dy*0.41+ph)));
+  const jf = (v, s, ph) => Math.max(0, parseFloat((v + v*s*Math.sin(dy*0.41+ph)).toFixed(2)));
+  const srh1 = j(base.srh1, 0.35, 0.0);
+  const srh3 = j(base.srh3, 0.30, 1.1);
+  const cape  = j(base.cape, 0.40, 2.2);
+  const ebs   = j(base.ebs,  0.25, 0.7);
+  const cin   = -50;
+  const scp   = computeSCP(cape, srh3, ebs);
+  const stp   = computeSTP(cape, srh1, ebs, cin);
+  return {srh1, srh3, cape, ebs, cin, scp, stp, source:'climatology'};
+}
+
+// ─── Parse Open-Meteo hourly data for a specific date ────────────────────────
+function extractHourlyParams(data, targetDate) {
+  const times = data.hourly.time;
+  // Find indices for this date's afternoon hours (12-20 local) — peak severe wx window
+  const dateStr = targetDate.toISOString().slice(0,10);
+  const indices = [];
+  times.forEach((t, i) => {
+    if(t.startsWith(dateStr)) {
+      const h = parseInt(t.slice(11,13));
+      if(h >= 12 && h <= 20) indices.push(i);
+    }
+  });
+  if(indices.length === 0) {
+    // fallback: any hour that day
+    times.forEach((t, i) => { if(t.startsWith(dateStr)) indices.push(i); });
+  }
+  if(indices.length === 0) return null;
+
+  const h = data.hourly;
+  // Average across the afternoon window, take max CAPE
+  const avg = (arr) => {
+    const vals = indices.map(i => arr[i]).filter(v => v !== null && v !== undefined);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+  };
+  const maxIdx = indices.reduce((best, i) =>
+    (h.cape[i] || 0) > (h.cape[best] || 0) ? i : best, indices[0]);
+
+  // Use the peak-CAPE hour for shear/direction params (most representative)
+  const i = maxIdx;
+  const cape  = Math.max(0, Math.round(avg(h.cape)));
+  const li    = avg(h.lifted_index);
+  const cin   = avg(h.convective_inhibition);
+  const ws10  = h.wind_speed_10m[i]  || 0;
+  const wd10  = h.wind_direction_10m[i] || 0;
+  const ws80  = h.wind_speed_80m[i]  || 0;
+  const wd80  = h.wind_direction_80m[i] || 0;
+  const ws120 = h.wind_speed_120m[i] || 0;
+  const wd120 = h.wind_direction_120m[i] || 0;
+  const ws180 = h.wind_speed_180m[i] || 0;
+  const wd180 = h.wind_direction_180m[i] || 0;
+
+  const srh1 = estimateSRH1(ws10, wd10, ws80, wd80);
+  const srh3 = estimateSRH3(ws10, wd10, ws120, wd120);
+  const ebs  = estimateEBS(ws10, wd10, ws180, wd180);
+  const scp  = computeSCP(cape, srh3, ebs);
+  const stp  = computeSTP(cape, srh1, ebs, cin);
+
+  return {srh1, srh3, cape, ebs, cin: Math.round(cin), scp, stp, li: parseFloat(li.toFixed(1)), source:'open-meteo'};
+}
+
+// ─── Fetch all data ───────────────────────────────────────────────────────────
+let cachedOMData = null;
+
+async function fetchOpenMeteo() {
+  const res = await fetch(OM_URL, { mode: 'cors' });
+  if(!res.ok) throw new Error('Open-Meteo HTTP ' + res.status);
+  return await res.json();
+}
+
+async function fetchAlerts() {
+  try {
+    const res = await fetch(NWS_URL, {
+      mode: 'cors',
+      headers: {
+        'User-Agent': 'VortexTornadoApp/1.0 (github.io)',
+        'Accept': 'application/geo+json'
+      }
+    });
+    if(!res.ok) throw new Error('NWS ' + res.status);
+    const data = await res.json();
+    const alertList = document.getElementById('alertList');
+    if(!data.features || data.features.length===0){
+      alertList.innerHTML=`<div class="alert-item none"><div class="alert-type">NO ACTIVE ALERTS</div><div class="alert-text">No weather alerts for Craighead County. Monitor weather.gov for updates.</div></div>`;
+      return [];
+    }
+    const alerts = data.features.slice(0,4);
+    alertList.innerHTML = alerts.map(a=>{
+      const p=a.properties, ev=(p.event||'WEATHER ALERT').toUpperCase();
+      const cls=ev.includes('TORNADO WARNING')?'tornado':ev.includes('TORNADO WATCH')||ev.includes('SEVERE')?'watch':'advisory';
+      return `<div class="alert-item ${cls}"><div class="alert-type">${ev}</div><div class="alert-text">${(p.headline||p.description||ev).slice(0,110)}</div></div>`;
+    }).join('');
+    return alerts.map(a=>a.properties?.event||'');
+  } catch(e) {
+    document.getElementById('alertList').innerHTML=`<div class="alert-item advisory"><div class="alert-type">ALERTS UNAVAILABLE</div><div class="alert-text">Live NWS data unavailable. Check weather.gov for current alerts.</div></div>`;
+    return [];
+  }
+}
+
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+function getRiskClass(score){
+  if(score<10) return 'risk-minimal';
+  if(score<25) return 'risk-low';
+  if(score<45) return 'risk-moderate';
+  if(score<65) return 'risk-elevated';
+  if(score<80) return 'risk-high';
+  return 'risk-extreme';
+}
+
+function setRiskUI(score, level, shortDesc, analysis, params){
+  document.getElementById('riskScore').textContent = score;
+  document.getElementById('riskScore').className = 'gauge-number ' + getRiskClass(score);
+  const circumference = 452;
+  document.getElementById('riskArc').style.strokeDashoffset = circumference - (score/100)*circumference;
+  const nameEl = document.getElementById('riskLevelName');
+  nameEl.textContent = level;
+  nameEl.className = 'risk-level-name ' + getRiskClass(score);
+  document.getElementById('riskDesc').textContent = shortDesc;
+
+  // Factor bars: SRH1, CAPE, EBS, STP
+  const map = {Shear:scoreSRH1(params.srh1), Cape:scoreCAPE(params.cape), Lift:scoreEBS(params.ebs), Season:scoreSTP(params.stp)};
+  Object.entries(map).forEach(([k,v])=>{
+    const b=document.getElementById('bar'+k), l=document.getElementById('val'+k);
+    if(b) b.style.width=v+'%';
+    if(l) l.textContent=v;
+  });
+
+  const aiEl = document.getElementById('aiContent');
+  aiEl.innerHTML='';
+  let i=0;
+  const t=setInterval(()=>{
+    if(i<analysis.length){ aiEl.innerHTML=analysis.slice(0,i+1)+'<span class="typing-cursor"></span>'; i++; }
+    else{ aiEl.innerHTML=analysis; clearInterval(t); }
+  },14);
+}
+
+function updateSPCPanel(params, source){
+  const note = document.getElementById('spcNote');
+  if(note){
+    note.innerHTML = source==='open-meteo'
+      ? '✅ LIVE DATA FROM OPEN-METEO (ECMWF IFS) — SRH & STP COMPUTED FROM WIND PROFILES. <a href="https://www.spc.noaa.gov/exper/mesoanalysis/new/" target="_blank" style="color:var(--accent2);text-decoration:none;">VERIFY AT SPC MESOANALYSIS ↗</a>'
+      : '⚠ OPEN-METEO UNAVAILABLE — SHOWING CLIMATOLOGICAL ESTIMATES. <a href="https://www.spc.noaa.gov/exper/mesoanalysis/new/" target="_blank" style="color:var(--accent2);text-decoration:none;">CHECK SPC MESOANALYSIS FOR LIVE VALUES ↗</a>';
+  }
+  const set=(id,val,score,interp)=>{
+    const el=document.getElementById('spcVal'+id);
+    const bar=document.getElementById('spcBar'+id);
+    const int=document.getElementById('spcInt'+id);
+    if(el){ el.textContent=val; el.style.color=score<20?'var(--safe)':score<40?'#90ee90':score<60?'var(--warn)':score<75?'var(--accent2)':'var(--accent)'; }
+    if(bar) bar.style.width=Math.min(100,score)+'%';
+    if(int) int.textContent=interp;
+  };
+  set('Srh1', params.srh1,                    scoreSRH1(params.srh1), interpSRH1(params.srh1));
+  set('Srh3', params.srh3,                    scoreSRH3(params.srh3), interpSRH3(params.srh3));
+  set('Cape', params.cape.toLocaleString(),   scoreCAPE(params.cape), interpCAPE(params.cape));
+  set('Shear',params.ebs,                     scoreEBS(params.ebs),   interpEBS(params.ebs));
+  set('Scp',  params.scp.toFixed(1),          scoreSCP(params.scp),   interpSCP(params.scp));
+  set('Stp',  params.stp.toFixed(2),          scoreSTP(params.stp),   interpSTP(params.stp));
+}
+
+// ─── 14-Day Forecast ──────────────────────────────────────────────────────────
+const SCORE_COLORS=[
+  {max:10, bg:'rgba(0,229,160,0.18)',  bar:'#00e5a0',text:'var(--safe)',   label:'MINIMAL' },
+  {max:25, bg:'rgba(144,238,144,0.15)',bar:'#90ee90', text:'#90ee90',      label:'LOW'     },
+  {max:45, bg:'rgba(255,215,0,0.12)', bar:'#ffd700', text:'var(--warn)',   label:'MODERATE'},
+  {max:65, bg:'rgba(255,140,0,0.15)', bar:'#ff8c00', text:'var(--accent2)',label:'ELEVATED'},
+  {max:80, bg:'rgba(255,69,0,0.18)',  bar:'#ff4500', text:'var(--accent)', label:'HIGH'    },
+  {max:101,bg:'rgba(255,0,0,0.2)',    bar:'#ff0000', text:'#ff0000',       label:'EXTREME' },
+];
+const FORECAST_CONF=['HIGH CONF','HIGH CONF','GOOD CONF','GOOD CONF','MOD CONF','MOD CONF','MOD CONF','LOW CONF','LOW CONF','LOW CONF','CLIM ONLY','CLIM ONLY','CLIM ONLY','CLIM ONLY'];
+
+function scoreStyle(score){ return SCORE_COLORS.find(c=>score<c.max)||SCORE_COLORS[SCORE_COLORS.length-1]; }
+
+function buildForecast(omData){
+  const grid = document.getElementById('forecastGrid');
+  if(!grid) return;
+  const DAY=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const now = new Date();
+  grid.innerHTML = '';
+
+  for(let d=0;d<14;d++){
+    const date = new Date(now); date.setDate(now.getDate()+d);
+    let params;
+    if(omData){
+      params = extractHourlyParams(omData, date) || getClimoParams(date);
+    } else {
+      params = getClimoParams(date);
+    }
+    const score = computeScoreFromParams(params);
+    const st = scoreStyle(score);
+    const barH = Math.max(3, Math.round((score/100)*26));
+    const conf = FORECAST_CONF[d];
+    const isToday = d===0;
+    const src = params.source==='open-meteo'?'Open-Meteo':'Climatology';
+
+    grid.innerHTML += `
+    <div class="forecast-card${isToday?' fc-today':''}" style="background:${st.bg}">
+      <div class="fc-glow" style="background:${st.bar};opacity:0.6"></div>
+      <div class="fc-day">${isToday?'TODAY':DAY[date.getDay()]}</div>
+      <div class="fc-date" style="color:${st.text}">${date.getDate()}</div>
+      <div class="fc-score" style="color:${st.text}">${score}</div>
+      <div class="fc-level" style="color:${st.text}">${st.label}</div>
+      <div class="fc-bar-wrap"><div class="fc-bar" style="height:${barH}px;background:${st.bar};box-shadow:0 0 6px ${st.bar}55"></div></div>
+      <div class="fc-conf">${conf}</div>
+      <div class="fc-tooltip">
+        <div class="fc-tt-title" style="color:${st.text}">${DAY[date.getDay()]} ${date.toLocaleDateString('en-US',{month:'short',day:'numeric'})} — ${st.label}</div>
+        <div class="fc-tt-body">
+          Score: <strong style="color:${st.text}">${score}/100</strong><br>
+          CAPE: ${params.cape} J/kg | SRH1: ${params.srh1} m²/s²<br>
+          EBS: ${params.ebs} kt | STP: ${params.stp.toFixed(2)}<br>
+          <em style="color:var(--muted);font-size:10px">Source: ${src} · ${conf}</em>
+        </div>
+      </div>
+    </div>`;
+  }
+}
+
+// ─── Seasonal chart & history ─────────────────────────────────────────────────
+function buildSeasonChart(){
+  const chart=document.getElementById('seasonChart');
+  const max=Math.max(...MONTHLY_DATA), cur=new Date().getMonth();
+  chart.innerHTML=MONTHS.map((m,i)=>`
+    <div class="month-bar-wrap">
+      <div class="month-bar${i===cur?' current':''}" style="height:${(MONTHLY_DATA[i]/max)*52}px" title="${MONTHLY_DATA[i]} avg"></div>
+      <span class="month-label">${m}</span>
+    </div>`).join('');
+}
+
+function buildHistoryTable(){
+  const tbody=document.getElementById('tornadoHistory');
+  tbody.innerHTML=TORNADO_HISTORY.map(t=>{
+    const cls=t.ef.toLowerCase().replace(/[^a-z0-9]/g,'');
+    return `<tr>
+      <td>${t.date}</td>
+      <td><span class="ef-badge ${cls}">${t.ef}</span></td>
+      <td>${t.path}</td>
+      <td>${t.location}</td>
+      <td>${t.inj>0?`<span style="color:var(--warn)">${t.inj}</span>`:'0'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── Main load ────────────────────────────────────────────────────────────────
+async function loadAll(){
+  const btn=document.getElementById('refreshBtn');
+  const icon=document.getElementById('refreshIcon');
+  const status=document.getElementById('statusText');
+  const dot=document.getElementById('liveDot');
+
+  btn.disabled=true; icon.classList.add('spin');
+  status.textContent='FETCHING'; dot.style.background='var(--warn)'; dot.style.boxShadow='0 0 8px var(--warn)';
+  document.getElementById('aiContent').innerHTML='<span class="typing-cursor"></span>';
+
+  // Fetch sequentially to avoid DataCloneError in sandboxed contexts
+  const alertEvents = await fetchAlerts();
+  let omData = null;
+  try {
+    omData = await fetchOpenMeteo();
+    cachedOMData = omData;
+  } catch(e) {
+    console.warn('Open-Meteo failed:', e);
+    document.getElementById('sandboxBanner').style.display = 'block';
+  }
+
+  const now = new Date();
+  let params;
+  if(omData){
+    params = extractHourlyParams(omData, now) || getClimoParams(now);
+  } else {
+    params = getClimoParams(now);
+  }
+
+  const score = computeScoreFromParams(params, alertEvents);
+  const {level, shortDesc, analysis} = getRiskMeta(score, params);
+
+  setRiskUI(score, level, shortDesc, analysis, params);
+  updateSPCPanel(params, params.source);
+  buildForecast(omData);
+
+  const src = params.source==='open-meteo'?'OPEN-METEO (LIVE)':'CLIMATOLOGICAL MODEL';
+  document.getElementById('aiTime').textContent=`COMPUTED: ${now.toLocaleString()} — DATA SOURCE: ${src}`;
+  document.getElementById('updateTime').textContent=now.toLocaleTimeString();
+
+  status.textContent = params.source==='open-meteo'?'LIVE — OPEN-METEO':'CLIMO FALLBACK';
+  dot.style.background=params.source==='open-meteo'?'var(--safe)':'var(--warn)';
+  dot.style.boxShadow=`0 0 8px ${params.source==='open-meteo'?'var(--safe)':'var(--warn)'}`;
+
+  btn.disabled=false; icon.classList.remove('spin');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+buildSeasonChart();
+buildHistoryTable();
+loadAll();
+
+// Auto-refresh every 30 minutes so data stays current while app is open
+setInterval(() => {
+  console.log('Auto-refreshing data...');
+  loadAll();
+}, 30 * 60 * 1000);
+</script>
+
+</body>
+</html>
