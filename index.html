@@ -8,11 +8,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="VORTEX">
 <meta name="theme-color" content="#0a0a0f">
+<meta name="color-scheme" content="dark">
 <meta name="description" content="Real-time tornado risk tracker for Jonesboro, AR">
 <title>VORTEX — Jonesboro Tornado Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
+    color-scheme: dark;
     --bg: #0a0a0f;
     --panel: #0f0f1a;
     --panel2: #13131f;
@@ -27,6 +29,11 @@
   }
 
 - { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+background: #0a0a0f;
+color-scheme: dark;
+}
 
 body {
 background: var(–bg);
@@ -566,6 +573,17 @@ z-index:200; text-align:left; pointer-events:none; box-shadow:0 4px 20px rgba(0,
 .fc-tt-body  { font-size:11px; color:#999; line-height:1.5; }
 .legend-item { display:flex; align-items:center; gap:5px; font-family:‘Share Tech Mono’,monospace; font-size:9px; color:var(–muted); letter-spacing:1px; }
 .legend-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+/* Force dark mode regardless of system preference */
+@media (prefers-color-scheme: light) {
+:root {
+color-scheme: dark;
+}
+html, body {
+background: #0a0a0f !important;
+color: #e8e8f0 !important;
+}
+}
 </style>
 
 </head>
